@@ -1,0 +1,6 @@
+streamlit
+googlesearch-python
+google-search-results
+google.generativeai
+python-dotenv
+firebase-admin
