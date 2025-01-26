@@ -495,4 +495,51 @@ if uploaded_file:
                 st.error(f"Error during analysis: {e}")
 
 
-            
+
+def save_feedback_to_database(email, feedback, email_updates, language):
+    """
+    Save the user's feedback to the database.
+    
+    Parameters:
+        email (str): The user's email address.
+        feedback (str): The feedback ("Yes" or "No").
+    """
+
+    # Reference to the feedback collection
+    feedback_ref = db.collection("user_feedback")
+
+    # Create a document for the feedback
+    feedback_data = {
+        "email": email,
+        "feedback": feedback,
+        "email_updates": email_updates,
+        "language": language,
+        "timestamp": firestore.SERVER_TIMESTAMP
+    }
+    
+    # Add the feedback to the collection
+    feedback_ref.add(feedback_data)
+
+# Feedback section at the end of the app
+st.write("### Feedback")
+
+# Collect feedback from the user: "Yes" or "No"
+feedback = st.radio("Was the image analysis accurate?", options=["Yes", "No"])
+
+# Ask the user if they agree to receive email updates
+email_updates = st.radio("Would you like to receive email updates?", options=["Yes", "No"])
+
+# Button to submit feedback
+feedback_submit = st.button("Submit Feedback")
+
+# Save the feedback to the database when the button is clicked
+if feedback_submit:
+    if not email:
+        st.error("Please enter your email earlier to save your feedback.")
+    else:
+        try:
+            # Call a function to save feedback to the database along with the email update preference
+            save_feedback_to_database(email, feedback, email_updates, language)
+            st.success("Thank you for your feedback! It has been saved.")
+        except Exception as e:
+            st.error(f"An error occurred while saving your feedback: {e}")
