@@ -497,50 +497,52 @@ if uploaded_file:
 
 
 
-def save_feedback_to_database(email, feedback, email_updates, language):
+# User feedback section
+
+def save_feedback_to_database(email, feedback, email_updates):
     """
-    Save the user's feedback to the database.
-    
-    Parameters:
-        email (str): The user's email address.
-        feedback (str): The feedback ("Yes" or "No").
+    Save feedback to Firestore: If user exists, update their record; otherwise, create a new entry.
     """
+    try:
+        users_ref = db.collection("users")
+        user_query = users_ref.where("email", "==", email).order_by("timestamp", direction=firestore.Query.DESCENDING).limit(1)
+        user_docs = user_query.stream()
+        user_list = list(user_docs)
 
-    # Reference to the feedback collection
-    feedback_ref = db.collection("user_feedback")
+        if user_list:
+            user_doc_id = user_list[0].id
+            users_ref.document(user_doc_id).update({
+                "feedback": feedback,
+                "email_updates": email_updates,
+                "feedback_timestamp": firestore.SERVER_TIMESTAMP
+            })
+            return True, "Thank you for your feedback!"
+        else:
+            new_user_data = {
+                "email": email,
+                "feedback": feedback,
+                "email_updates": email_updates,
+                "feedback_timestamp": firestore.SERVER_TIMESTAMP
+            }
+            users_ref.add(new_user_data)  # Create a new record
+            return True, "New user feedback saved successfully."
 
-    # Create a document for the feedback
-    feedback_data = {
-        "email": email,
-        "feedback": feedback,
-        "email_updates": email_updates,
-        "language": language,
-        "timestamp": firestore.SERVER_TIMESTAMP
-    }
-    
-    # Add the feedback to the collection
-    feedback_ref.add(feedback_data)
+    except Exception as e:
+        return False, f"Error saving feedback: {e}"
 
-# Feedback section at the end of the app
+# Feedback section
 st.write("### Feedback")
 
-# Collect feedback from the user: "Yes" or "No"
 feedback = st.radio("Was the image analysis accurate?", options=["Yes", "No"])
-
-# Ask the user if they agree to receive email updates
 email_updates = st.radio("Would you like to receive email updates?", options=["Yes", "No"])
-
-# Button to submit feedback
 feedback_submit = st.button("Submit Feedback")
 
-# Save the feedback to the database when the button is clicked
 if feedback_submit:
     if not email:
         st.error("Please enter your email earlier to save your feedback.")
     else:
-        try:
-            # Call a function to save feedback to the database along with the email update preference
-            save_feedback_to_database(email, feedback, email_updates, language)
-            st.success("Thank you for your feedback! It has been saved.")
-        except Exception as e:
-            st.error(f"An error occurred while saving your feedback: {e}")
+        success, message = save_feedback_to_database(email, feedback, email_updates)
+        if success:
+            st.success(message)
+        else:
+            st.error(message)
