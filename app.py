@@ -114,7 +114,8 @@ def save_user_data(email, player_name, language):
         user_ref = db.collection('users').add({
             'email': email,
             'player_name': player_name,
-            'language': language
+            'language': language,
+            'timestamp': firestore.SERVER_TIMESTAMP
         })
         st.success(f"Data saved for {player_name}.")
     except Exception as e:
