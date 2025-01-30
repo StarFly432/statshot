@@ -152,6 +152,34 @@ def get_player_stats(player_id, season):
     except Exception as e:
         st.error(f"An unexpected error occurred while fetching player stats: {e}")
         return None
+
+def get_gemini_summary(player_json, language):
+    try:
+        model = genai.GenerativeModel('gemini-1.5-pro')
+        
+        # Define prompt
+        input_prompt = f"Summarize the following sports statistics table in {language}:"
+        
+        # Generate summary
+        response = model.generate_content([input_prompt, player_json])
+        
+        return response.text.strip()  # Clean response
+    except Exception as e:
+        return f"Error generating summary: {e}"
+
+def get_stats_summary(stats_json, language):
+    try:
+        model = genai.GenerativeModel('gemini-1.5-pro')
+        
+        # Define prompt
+        input_prompt = f"Summarize the following sports statistics table in {language}:"
+        
+        # Generate summary
+        response = model.generate_content([input_prompt, stats_json])
+        
+        return response.text.strip()  # Clean response
+    except Exception as e:
+        return f"Error generating summary: {e}"
         
 
 # Application Logic
@@ -351,62 +379,16 @@ if uploaded_file:
                     # Convert the translated attributes to a DataFrame
                     details_df = pd.DataFrame(list(translated_attributes.items()), columns=["Attribute", "Value"])
                     st.table(details_df)
-                    
-                    # Generate a textual summary with key attributes based on the selected language
-                    if language == "Spanish":
-                        summary = f"""
-                        **{key_attributes['Full Name']}**, conocido como "{key_attributes['Nickname']}", es un {key_attributes['Primary Position']} 
-                        que usa el número de camiseta **{key_attributes['Jersey Number']}**. Nació el **{key_attributes['Birth Date']}** en 
-                        **{key_attributes['Birthplace']}**, y actualmente tiene **{key_attributes['Current Age']} años**.
-                    
-                        Mide **{key_attributes['Height']}** y pesa **{key_attributes['Weight (lbs)']} lbs**, batea como **{key_attributes['Bats']}** 
-                        y lanza como **{key_attributes['Throws']}**. Este jugador hizo su debut en MLB el **{key_attributes['MLB Debut Date']}** 
-                        y actualmente está **activo** en la liga.
-                        """
-                    elif language == "Japanese":
-                        summary = f"""
-                        **{key_attributes['Full Name']}**、ニックネームは"{key_attributes['Nickname']}"、ポジションは{key_attributes['Primary Position']}で 
-                        背番号は**{key_attributes['Jersey Number']}**です。**{key_attributes['Birth Date']}**に生まれ、 
-                        **{key_attributes['Birthplace']}**出身で、現在の年齢は**{key_attributes['Current Age']}歳**です。
-                    
-                        身長は**{key_attributes['Height']}**、体重は**{key_attributes['Weight (lbs)']} lbs**、打席は**{key_attributes['Bats']}** 
-                        、投げる手は**{key_attributes['Throws']}**です。この選手は**{key_attributes['MLB Debut Date']}**にメジャーデビューし、現在 
-                        {"現役" if key_attributes['Active Player'] == "Yes" else "引退"}しています。
-                        """
-                    elif language == "French":
-                        summary = f"""
-                        **{key_attributes['Full Name']}**, surnommé "{key_attributes['Nickname']}", est un joueur de {key_attributes['Primary Position']} 
-                        avec le numéro de maillot **{key_attributes['Jersey Number']}**. Né le **{key_attributes['Birth Date']}** à 
-                        **{key_attributes['Birthplace']}**, il a actuellement **{key_attributes['Current Age']} ans**.
-                    
-                        Il mesure **{key_attributes['Height']}** et pèse **{key_attributes['Weight (lbs)']} lbs**, il frappe en **{key_attributes['Bats']}** 
-                        et lance avec **{key_attributes['Throws']}**. Ce joueur a fait ses débuts en MLB le **{key_attributes['MLB Debut Date']}** 
-                        et il est actuellement {"actif" if key_attributes['Active Player'] == "Yes" else "inactif"} dans la ligue.
-                        """
-                    elif language == "Chinese":
-                        summary = f"""
-                        **{key_attributes['Full Name']}**，昵称为“{key_attributes['Nickname']}”，是一名 **{key_attributes['Primary Position']}** 球员，
-                        背号为 **{key_attributes['Jersey Number']}**。他于 **{key_attributes['Birth Date']}** 出生在 **{key_attributes['Birthplace']}**，
-                        现年 **{key_attributes['Current Age']} 岁**。
-                    
-                        他身高 **{key_attributes['Height']}**，体重 **{key_attributes['Weight (lbs)']} 磅**，打击习惯为 **{key_attributes['Bats']}**，
-                        投球习惯为 **{key_attributes['Throws']}**。这位球员在 **{key_attributes['MLB Debut Date']}** 完成了他的 MLB 首秀，
-                        他目前在联盟中是 **{"活跃" if key_attributes['Active Player'] == "Yes" else "非活跃"}** 状态。
-                        """
-                    else:
-                        summary = f"""
-                        **{key_attributes['Full Name']}**, also known as "{key_attributes['Nickname']}", is a {key_attributes['Primary Position']} 
-                        wearing jersey number **{key_attributes['Jersey Number']}**. Born on **{key_attributes['Birth Date']}** in 
-                        **{key_attributes['Birthplace']}**, they are currently **{key_attributes['Current Age']} years old**.
-                    
-                        Standing at **{key_attributes['Height']}** and weighing **{key_attributes['Weight (lbs)']} lbs**, they bat **{key_attributes['Bats']}** 
-                        and throw **{key_attributes['Throws']}**. This player made their MLB debut on **{key_attributes['MLB Debut Date']}** 
-                        and is currently **{key_attributes['Active Player']}** in the league.
-                        """
-                    
-                    # Display the generated summary based on the language
-                    st.markdown(summary)
 
+
+                    # Convert to JSON
+                    player_json = json.dumps(key_attributes, indent=4)
+
+                    # Send data to Gemini for summary generation
+                    gemini_summary = get_gemini_summary(player_json, language)
+
+                    # Display the summary
+                    st.write(gemini_summary)
 
 
                     # Fetch player stats for the most recent season
@@ -487,14 +469,25 @@ if uploaded_file:
                                         
                                         # Display the translated two-column stats table
                                         st.dataframe(stats_df_two_columns)
+                                                                            
+
                                     else:
                                         st.write("No data available for this group.")
-                                                                                                    
+
+
+                                    # Convert to JSON
+                                    stats_json = json.dumps(player_stats, indent=4)
+
+                                    # Send data to Gemini for summary generation
+                                    stats_summary = get_stats_summary(stats_json, language)
+
+                                    # Display the summary
+                                    st.write(stats_summary)
+
 
     
             except Exception as e:
                 st.error(f"Error during analysis: {e}")
-
 
 
 # User feedback section
